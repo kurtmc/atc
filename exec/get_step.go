@@ -141,7 +141,11 @@ func (step *GetStep) Run(signals <-chan os.Signal, ready chan<- struct{}) error 
 		return err
 	}
 
-	step.repository.RegisterSource(step.sourceName, step)
+	step.repository.RegisterSource(step.sourceName, &getStepSource{
+		logger:           step.logger,
+		resourceInstance: step.resourceInstance,
+		versionedSource:  step.versionedSource,
+	})
 
 	step.logger.Debug("completing-get-step", lager.Data{"version": step.versionedSource.Version(), "metadata": step.versionedSource.Metadata()})
 	step.succeeded = true
@@ -178,15 +182,21 @@ func (step *GetStep) Result(x interface{}) bool {
 	}
 }
 
+type getStepSource struct {
+	logger           lager.Logger
+	resourceInstance resource.ResourceInstance
+	versionedSource  resource.VersionedSource
+}
+
 // VolumeOn locates the cache for the GetStep's resource and version on the
 // given worker.
-func (step *GetStep) VolumeOn(worker worker.Worker) (worker.Volume, bool, error) {
-	return step.resourceInstance.FindInitializedOn(step.logger.Session("volume-on"), worker)
+func (s *getStepSource) VolumeOn(worker worker.Worker) (worker.Volume, bool, error) {
+	return s.resourceInstance.FindInitializedOn(s.logger.Session("volume-on"), worker)
 }
 
 // StreamTo streams the resource's data to the destination.
-func (step *GetStep) StreamTo(destination worker.ArtifactDestination) error {
-	out, err := step.versionedSource.StreamOut(".")
+func (s *getStepSource) StreamTo(destination worker.ArtifactDestination) error {
+	out, err := s.versionedSource.StreamOut(".")
 	if err != nil {
 		return err
 	}
@@ -197,8 +207,8 @@ func (step *GetStep) StreamTo(destination worker.ArtifactDestination) error {
 }
 
 // StreamFile streams a single file out of the resource.
-func (step *GetStep) StreamFile(path string) (io.ReadCloser, error) {
-	out, err := step.versionedSource.StreamOut(path)
+func (s *getStepSource) StreamFile(path string) (io.ReadCloser, error) {
+	out, err := s.versionedSource.StreamOut(path)
 	if err != nil {
 		return nil, err
 	}
@@ -261,12 +271,4 @@ func (d *getStepResource) LockName(workerName string) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%x", sha256.Sum256(taskNameJSON)), nil
-}
-
-type getStepLockID struct {
-	Type       resource.ResourceType `json:"type"`
-	Version    atc.Version           `json:"version"`
-	Source     atc.Source            `json:"source"`
-	Params     atc.Params            `json:"params"`
-	WorkerName string                `json:"worker_name"`
 }

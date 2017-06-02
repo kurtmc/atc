@@ -16,19 +16,13 @@ import (
 type Factory interface {
 	// Get constructs a GetStep factory.
 	Get(
-		lager.Logger,
-		int, // teamID
-		int, // buildID
-		atc.PlanID,
-		StepMetadata,
-		worker.ArtifactName,
-		dbng.ContainerMetadata,
-		GetDelegate,
-		atc.ResourceConfig,
-		atc.Tags,
-		atc.Params,
-		atc.Version,
-		atc.VersionedResourceTypes,
+		logger lager.Logger,
+		teamID int,
+		buildID int,
+		plan atc.Plan,
+		stepMetadata StepMetadata,
+		workerMetadata dbng.ContainerMetadata,
+		delegate GetDelegate,
 	) StepFactory
 
 	// Put constructs a PutStep factory.
