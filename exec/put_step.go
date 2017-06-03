@@ -27,6 +27,8 @@ type PutStep struct {
 	resourceFactory resource.ResourceFactory
 	resourceTypes   atc.VersionedResourceTypes
 
+	result *atc.Version
+
 	repository *worker.ArtifactRepository
 
 	resource resource.Resource
@@ -49,6 +51,7 @@ func newPutStep(
 	delegate PutDelegate,
 	resourceFactory resource.ResourceFactory,
 	resourceTypes atc.VersionedResourceTypes,
+	result *atc.Version,
 ) PutStep {
 	return PutStep{
 		logger:          logger,
@@ -63,6 +66,7 @@ func newPutStep(
 		delegate:        delegate,
 		resourceFactory: resourceFactory,
 		resourceTypes:   resourceTypes,
+		result:          result,
 	}
 }
 
@@ -152,6 +156,9 @@ func (step *PutStep) Run(signals <-chan os.Signal, ready chan<- struct{}) error 
 		Version:  step.versionedSource.Version(),
 		Metadata: step.versionedSource.Metadata(),
 	})
+
+	version := step.versionedSource.Version()
+	step.result = &version
 
 	return nil
 }
